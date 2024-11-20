@@ -8,12 +8,15 @@ function DietForm() {
         heightCm: 0,
         heightFt: 0,
         heightIn: 0,
-        weight: 0,
+        weightKg: 0,
+        weightIb: 0,
         gender: 'male',
         activity: 'little',
         weightPlan: 'maintain',
         hasRestrictions: false, 
         foodRestriction: '',
+        specifiedIngredients: '',
+        noIngredients: '',
         mealsPerDay: 3,
 
         calories: 500,
@@ -49,13 +52,39 @@ function DietForm() {
     //     }
     // }, [unit]);
 
+    // const handleChange = (e) => {
+    //     const { name, type, value, checked } = e.target;
+    //     setFormData(prevState => ({
+    //         ...prevState,
+    //         [name]: type === 'checkbox' ? checked : value
+    //     }));
+    // };   
+
     const handleChange = (e) => {
         const { name, type, value, checked } = e.target;
-        setFormData(prevState => ({
-            ...prevState,
-            [name]: type === 'checkbox' ? checked : value
-        }));
-    };   
+        setFormData(prevState => {
+            const newState = {
+                ...prevState,
+                [name]: type === 'checkbox' ? checked : value
+            };
+    
+            // Trigger conversion if unit is english (for both height and weight)
+            // if (unit === 'english' && (name === 'heightFt' || name === 'heightIn')) {
+            //     console.log(convertHeightToCm(newState))
+            //     return convertHeightToCm(newState);
+            // }
+            // return newState;
+            if (unit === 'english' && (name === 'heightFt' || name === 'heightIn')) {
+                return convertHeightToCm(newState);
+            }
+            
+            if (unit === 'english' && name === 'weightIb') {
+                return convertWeightToKg(newState);
+            }
+    
+            return newState;
+        });
+    };
 
     const handleNutritionChange = (e) => {
         const { name, value } = e.target;
@@ -66,44 +95,47 @@ function DietForm() {
     };
     
     
-    const convertHeightToCm = () => {
-        if (unit === 'metric') {
-        //     // Convert cm to feet and inches
-        //     const totalInches = formData.heightCm / 2.54;
-        //     const heightFt = Math.floor(totalInches / 12);
-        //     const heightIn = Math.round(totalInches % 12);
-        //     setFormData(prevState => ({
-        //         ...prevState,
-        //         heightFt,
-        //         heightIn
-        //     }));
-        // } else {
-        //     // Convert feet and inches to cm
-        //     const heightCm = Math.round((formData.heightFt * 12 + formData.heightIn) * 2.54);
-        //     setFormData(prevState => ({
-        //         ...prevState,
-        //         heightCm
-        //     }));
-            const heightCm = Math.round((formData.heightFt * 12 + formData.heightIn) * 2.54);
-            // const weightKg = Math.round(formData.weight * 0.453592);
-            setFormData(prevState => ({
-                ...prevState,
-                heightCm,
-                // weightKg
-            }));
-        }
+    // const convertHeightToCm = () => {
+    //     if (unit === 'english') {
+    //         const heightCm = Math.round((formData.heightFt * 12 + formData.heightIn) * 2.54);
+    //         // const weightKg = Math.round(formData.weight * 0.453592);
+    //         setFormData(prevState => ({
+    //             ...prevState,
+    //             heightCm,
+    //             // weightKg
+    //         }));
+    //     }
+    // };
+
+    const convertHeightToCm = (formData) => {
+        const heightFt = parseFloat(formData.heightFt || 0);
+        const heightIn = parseFloat(formData.heightIn || 0);
+        const heightCm = Math.round((heightFt * 12 + heightIn) * 2.54);
+        return {
+            ...formData,
+            heightCm
+        };
     };
     
-    useEffect(() => {
-        convertHeightToCm();
-    }, [unit]);
+    const convertWeightToKg = (formData) => {
+        const weightIb = parseFloat(formData.weightIb || 0);
+        const weightKg = Math.round(weightIb * 0.453592)
+        return {
+            ...formData,
+            weightKg
+        };
+    };
+    
+    // useEffect(() => {
+    //     convertHeightToCm();
+    // }, [unit]);
 
     const calculateBMI = () => {
-        const { weight, heightCm } = formData;
-        console.log(weight)
+        const { weightKg, heightCm } = formData;
+        console.log(weightKg)
         console.log(heightCm)
         const heightInMeters = heightCm / 100;
-        const bmi = weight / (heightInMeters * heightInMeters);
+        const bmi = weightKg / (heightInMeters * heightInMeters);
         let category, color;
 
         if (bmi < 18.5) {
@@ -124,10 +156,10 @@ function DietForm() {
     }
 
     const calculateBMR = () => {    //https://www.verywellfit.com/how-many-calories-do-i-need-each-day-2506873
-        const { weight, height, age, gender } = formData;
+        const { weightKg, heightCm, age, gender } = formData;
         const bmr = gender === 'male'
-            ? 9.563 * weight + 1.850 * height - 4.676 * age + 655.1
-            : 13.75 * weight + 5.003 * height - 6.755 * age + 66.47;
+            ? 9.563 * weightKg + 1.850 * heightCm - 4.676 * age + 655.1
+            : 13.75 * weightKg + 5.003 * heightCm - 6.755 * age + 66.47;
         return bmr;
     }
 
@@ -201,7 +233,20 @@ function DietForm() {
                     <label>Age<input type="number" name="age" value={formData.age} onChange={handleChange} /></label>
                     {/* <label>Height(cm)<input type="number" name="height" value={formData.height} onChange={handleChange} /></label>
                     <label>Weight(kg)<input type="number" name="weight" value={formData.weight} onChange={handleChange} /></label> */}
-                    <label>Weight ({unit === 'metric' ? 'kg' : 'lbs'}):<input type="number" name="weight" value={formData.weight} onChange={handleChange} /></label>
+                    {/* <label>Weight ({unit === 'metric' ? 'kg' : 'lbs'}):<input type="number" name="weight" value={formData.weight} onChange={handleChange} /></label> */}
+                    <label><div>
+                        {unit === 'metric' ? (
+                            <label>Weight (kg):
+                                <input type="number" name="weightKg" value={formData.weightKg} onChange={handleChange} />
+                            </label>
+                        ) : 
+                        (
+                            <label>Weight (Ibs):
+                                <input type="number" name="weightIb" value={formData.weightIb} onChange={handleChange}/>
+                            </label>
+                        )}
+                    </div></label>
+                    
                     {/* <label>Height ({unit === 'metric' ? 'cm' : 'inches'}):<input type="number" name="height" value={formData.height} onChange={handleChange} /></label> */}
                     <label><div>
                         {unit === 'metric' ? (
@@ -269,6 +314,26 @@ function DietForm() {
                             </select>
                         </label>
                     )}
+                    <label>
+                        Specify ingredients to include, separated by ";" :
+                        <input
+                            type="text"
+                            name="specifiedIngredients"
+                            placeholder="Ingredient1;Ingredient2;..."
+                            value={formData.specifiedIngredients}
+                            onChange={handleChange}
+                        />
+                    </label>
+                    <label>
+                        Specify ingredients to not include, separated by ";" :
+                        <input
+                            type="text"
+                            name="noIngredients"
+                            placeholder="Ingredient1;Ingredient2;..."
+                            value={formData.noIngredients}
+                            onChange={handleChange}
+                        />
+                    </label>
                     <label>Meals per day<input type="number" name="mealsPerDay" value={formData.mealsPerDay} onChange={handleChange} /></label>
                     {/* <button onClick={() => console.log(formData)}>Generate</button> */}
 
@@ -288,7 +353,7 @@ function DietForm() {
                     <div style={{ fontSize: '20px', color: formData.color}}>
                         {formData.bmi} <span style={{ marginLeft: '20px', color: formData.color }}>{formData.category}</span>
                     </div>
-                    <div style={{ color: 'grey' }}>""" Healthy BMI range: 18.5 kg/m² - 25 kg/m². """</div>
+                    <div style={{ color: 'grey' }}>""" Healthy BMI range: 18.5 kg/m² - 24.9 kg/m². """</div>
                     
 
                     <p>Calories: {formData.maintenanceCalories} calories/day</p>

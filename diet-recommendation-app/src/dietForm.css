@@ -114,6 +114,10 @@
   width: auto;
 }
 
+.diet-form input[type="text"] {
+  width: 90%;
+}
+
 .diet-form button {
   display: block;
   width: 100%;
