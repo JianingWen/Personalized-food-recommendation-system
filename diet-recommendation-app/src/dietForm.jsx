@@ -29,36 +29,14 @@ function DietForm() {
         sugarContent: 10,
         proteinContent: 10,
     });
-
+    
+    const [recommendations, setRecommendations, setRecommendedCalories] = useState([]);
+    const [expandedIndex, setExpandedIndex] = useState(null);
     const [unit, setUnit] = useState('metric');
 
     const toggleUnit = () => {
         setUnit(prevUnit => (prevUnit === 'metric' ? 'english' : 'metric'));
-    };
-
-    // useEffect(() => {
-    //     if (unit === 'english') {
-    //         setFormData(prevState => ({
-    //             ...prevState,
-    //             weight: Math.round(prevState.weight * 2.20462),
-    //             height: Math.round(prevState.height * 0.393701)
-    //         }));
-    //     } else {
-    //         setFormData(prevState => ({
-    //             ...prevState,
-    //             weight: Math.round(prevState.weight * 0.453592),
-    //             height: Math.round(prevState.height * 2.54)
-    //         }));
-    //     }
-    // }, [unit]);
-
-    // const handleChange = (e) => {
-    //     const { name, type, value, checked } = e.target;
-    //     setFormData(prevState => ({
-    //         ...prevState,
-    //         [name]: type === 'checkbox' ? checked : value
-    //     }));
-    // };   
+    };  
 
     const handleChange = (e) => {
         const { name, type, value, checked } = e.target;
@@ -68,12 +46,6 @@ function DietForm() {
                 [name]: type === 'checkbox' ? checked : value
             };
     
-            // Trigger conversion if unit is english (for both height and weight)
-            // if (unit === 'english' && (name === 'heightFt' || name === 'heightIn')) {
-            //     console.log(convertHeightToCm(newState))
-            //     return convertHeightToCm(newState);
-            // }
-            // return newState;
             if (unit === 'english' && (name === 'heightFt' || name === 'heightIn')) {
                 return convertHeightToCm(newState);
             }
@@ -92,20 +64,7 @@ function DietForm() {
             ...prevFormData,
             [name]: parseInt(value, 10) // Ensuring the value is treated as a number
         }));
-    };
-    
-    
-    // const convertHeightToCm = () => {
-    //     if (unit === 'english') {
-    //         const heightCm = Math.round((formData.heightFt * 12 + formData.heightIn) * 2.54);
-    //         // const weightKg = Math.round(formData.weight * 0.453592);
-    //         setFormData(prevState => ({
-    //             ...prevState,
-    //             heightCm,
-    //             // weightKg
-    //         }));
-    //     }
-    // };
+    }; 
 
     const convertHeightToCm = (formData) => {
         const heightFt = parseFloat(formData.heightFt || 0);
@@ -173,13 +132,26 @@ function DietForm() {
         };
         return bmr * activityLevels[formData.activity];
     }
+    // Function to adjust calories based on weight plan
+    const calculateRecommendedCalories = () => {
+        const bmr = calculateBMR();
+        const maintenanceCalories = calculateCalories(bmr);
 
-    // const [calories, setCalories] = useState(500);
+        switch (formData.weightPlan) {
+            case 'lose':
+                return maintenanceCalories - 500; // Deficit for weight loss
+            case 'gain':
+                return maintenanceCalories + 500; // Surplus for weight gain
+            default:
+                return maintenanceCalories; // Maintain weight
+        }
+    };
 
-    // const handleCaloriesChange = (e) => {
-    //     setCalories(e.target.value);
-    // };
-
+    // Update recommended calories when relevant inputs change
+    useEffect(() => {
+        const calories = calculateRecommendedCalories();
+        setRecommendedCalories(Math.round(calories));
+    }, [formData]);
 
 
     const handleSubmit = async (e) => {
@@ -187,7 +159,7 @@ function DietForm() {
 
         const { bmi, category, color } = calculateBMI();
         const bmr = calculateBMR();
-        const maintenanceCalories = calculateCalories(bmr);
+        const maintenanceCalories = calculateRecommendedCalories();
 
         setFormData(prevState => ({
             ...prevState,
@@ -197,29 +169,68 @@ function DietForm() {
             bmr: bmr.toFixed(0),
             maintenanceCalories: maintenanceCalories.toFixed(0)
         }));
-
-
-        try {
-            const response = await fetch('/submit', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            });
-            const data = await response.json(); // Assuming the server responds with JSON
-            console.log(data); 
-            // const response = await axios.post('/submit', formData);
-            // console.log(response.data);
-        } catch (error) {
-            console.error('Error submitting form:', error);
-        }
-    };
-
-    const handleGenerateClick = () => {
-        console.log("Generating menu:", formData);
+  
     };
     
+    const handleGenerateClick = async () => {
+        setRecommendations([]);
+        const payload = {
+            nutrition_input: [
+                formData.calories,
+                formData.fatContent,
+                formData.saturatedFatContent,
+                formData.cholesterolContent,
+                formData.sodiumContent,
+                formData.carbohydrateContent,
+                formData.fiberContent,
+                formData.sugarContent,
+                formData.proteinContent,
+            ],
+            ingredients: formData.specifiedIngredients
+            ? formData.specifiedIngredients.split(";").map((item) => item.trim())
+            : [],
+            food_restrictions: formData.hasRestrictions ? [formData.foodRestriction] : [],
+            params: {
+                n_neighbors: 5,
+                return_distance: false,
+            },
+        };
+        console.log('payload', payload)
+        try {
+            const response = await fetch("http://127.0.0.1:5000/predict", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload),
+            });
+
+            // const response = await fetch('/submit', {
+            //     method: 'POST',
+            //     headers: {
+            //         'Content-Type': 'application/json'
+            //     },
+            //     body: JSON.stringify(formData)
+            // });
+    
+            const data = await response.json();
+            console.log('Response:', data);
+            if (data.output) {
+                setRecommendations(data.output); // Store the recommendations in state
+                
+            } else {
+                console.log(data.message ||"No recommendations found");
+
+            }
+        } catch (error)
+        {
+            console.log("Error generating recommendations:", error);
+        }
+        
+    };
+    const toggleExpand = (index) => {
+        setExpandedIndex((prevIndex) => (prevIndex === index ? null : index));
+    };
 
     return (
         <div className="diet-info-container">
@@ -353,11 +364,14 @@ function DietForm() {
                     <div style={{ fontSize: '20px', color: formData.color}}>
                         {formData.bmi} <span style={{ marginLeft: '20px', color: formData.color }}>{formData.category}</span>
                     </div>
-                    <div style={{ color: 'grey' }}>""" Healthy BMI range: 18.5 kg/m² - 24.9 kg/m². """</div>
+                    <div style={{ color: 'grey' }}>
+                        """ Healthy BMI range: 18.5 kg/m² - 24.9 kg/m². """
+                    </div>
                     
 
                     <p>Calories: {formData.maintenanceCalories} calories/day</p>
                 </div>
+                
                 <div className="nutrition-tracking">
                     <h2>Nutrition Tracking</h2>
                     <label><b>Calories:</b>
@@ -404,13 +418,47 @@ function DietForm() {
                         <div className="slider-value">{formData.fatContent} g</div>
                         <input type="range" name="fatContent" min="0" max="100" value={formData.fatContent} onChange={handleNutritionChange} />
                     </label> */}
+                    
                     <div>
                         <button type="button" onClick={handleGenerateClick}>Generate</button>
                     </div>
-                    
 
                 </div>
-
+                <div className="food-recommendations">
+                    <h2>Food Recommendations</h2>
+                    {recommendations.length > 0 ? (
+                        <ul>
+                            {recommendations.map((recipe, index) => (
+                                <li key={index}>
+                                    <div
+                                        onClick={() => toggleExpand(index)}
+                                        style={{
+                                            cursor: "pointer",
+                                            fontWeight: "bold",
+                                            color: expandedIndex === index ? "#007BFF" : "#000",
+                                        }}
+                                    >
+                                        {recipe.Name} ({recipe.Calories} Calories)
+                                    </div>
+                                    {expandedIndex === index && (
+                                        <div className="recipe-details">
+                                            <p>
+                                                <b>Ingredients:</b>{" "}
+                                                {recipe.RecipeIngredientParts.join(", ")}
+                                            </p>
+                                            <p>
+                                                <b>Instructions:</b>{" "}
+                                                {recipe.RecipeInstructions.join(". ")}
+                                            </p>
+                                        </div>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p>No recommendations yet. Click "Generate" to get started!</p>
+                    )}
+                </div>
             </div>
 
             {/* <div className="results">
