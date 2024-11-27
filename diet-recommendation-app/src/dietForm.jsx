@@ -1,5 +1,4 @@
 import React, { useState, useEffect, Component } from 'react';
-import axios from 'axios';
 import './dietForm.css';
 
 function DietForm() {
@@ -18,7 +17,7 @@ function DietForm() {
         specifiedIngredients: '',
         noIngredients: '',
         mealsPerDay: 3,
-
+        maintenanceCalories: 0,
         calories: 500,
         fatContent: 50,
         saturatedFatContent: 0,
@@ -30,33 +29,53 @@ function DietForm() {
         proteinContent: 10,
     });
     
-    const [recommendations, setRecommendations, setRecommendedCalories] = useState([]);
+    const [recommendations, setRecommendations] = useState([]);
     const [expandedIndex, setExpandedIndex] = useState(null);
     const [unit, setUnit] = useState('metric');
-
+    const useMetric = () => {
+        setUnit('metric');
+        setFormData(prevState => ({
+            ...prevState,
+            heightCm: prevState.heightFt > 0 || prevState.heightIn > 0 
+                ? Math.round((prevState.heightFt * 30.48) + (prevState.heightIn * 2.54)) 
+                : prevState.heightCm,
+            weightKg: prevState.weightIb > 0 
+                ? Math.round(prevState.weightIb * 0.453592) 
+                : prevState.weightKg,
+            heightFt: 0,
+            heightIn: 0,
+            weightIb: 0,
+        }));
+    };
+    const useEnglish = () => {
+        setUnit('english');
+        setFormData(prevState => ({
+            ...prevState,
+            heightFt: prevState.heightCm > 0 
+                ? Math.floor(prevState.heightCm / 30.48) 
+                : prevState.heightFt,
+            heightIn: prevState.heightCm > 0 
+                ? Math.round((prevState.heightCm % 30.48) / 2.54) 
+                : prevState.heightIn,
+            weightIb: prevState.weightKg > 0 
+                ? Math.round(prevState.weightKg / 0.453592) 
+                : prevState.weightIb,
+            heightCm: 0,
+            weightKg: 0,
+        }));
+    };
+    /*
     const toggleUnit = () => {
         setUnit(prevUnit => (prevUnit === 'metric' ? 'english' : 'metric'));
     };  
-
+    */
     const handleChange = (e) => {
         const { name, type, value, checked } = e.target;
-        setFormData(prevState => {
-            const newState = {
-                ...prevState,
-                [name]: type === 'checkbox' ? checked : value
-            };
     
-
-            if (unit === 'english' && (name === 'heightFt' || name === 'heightIn')) {
-                return convertHeightToCm(newState);
-            }
-            
-            if (unit === 'english' && name === 'weightIb') {
-                return convertWeightToKg(newState);
-            }
-    
-            return newState;
-        });
+        setFormData(prevState => ({
+            ...prevState,
+            [name]: type === 'checkbox' ? checked : value // Correctly updates formData
+        }));
     };
 
     const handleNutritionChange = (e) => {
@@ -66,7 +85,7 @@ function DietForm() {
             [name]: parseInt(value, 10) // Ensuring the value is treated as a number
         }));
     }; 
-
+/*
     const convertHeightToCm = (formData) => {
         const heightFt = parseFloat(formData.heightFt || 0);
         const heightIn = parseFloat(formData.heightIn || 0);
@@ -85,11 +104,7 @@ function DietForm() {
             weightKg
         };
     };
-    
-    // useEffect(() => {
-    //     convertHeightToCm();
-    // }, [unit]);
-
+*/
     const calculateBMI = () => {
         const { weightKg, heightCm } = formData;
         console.log(weightKg)
@@ -115,14 +130,33 @@ function DietForm() {
         return { bmi, category, color };
     }
 
-    const calculateBMR = () => {    //https://www.verywellfit.com/how-many-calories-do-i-need-each-day-2506873
-        const { weightKg, heightCm, age, gender } = formData;
+    const calculateBMR = () => {
+        const { weightKg, weightIb, heightCm, heightFt, heightIn, age, gender } = formData;
+    
+        // Convert English units to metric if needed
+        let weightInKg = weightKg;
+        let heightInCm = heightCm;
+    
+        // If using English units, perform conversions
+        if (unit === 'english') {
+            weightInKg = weightIb * 0.453592; // Convert pounds to kilograms
+            heightInCm = (heightFt * 30.48) + (heightIn * 2.54); // Convert feet and inches to centimeters
+        }
+    
+        // Validate inputs
+        if (!weightInKg || !heightInCm || !age || !gender) {
+            console.error("Missing or invalid input values:", { weightInKg, heightInCm, age, gender });
+            return 0; // Return 0 as a fallback for invalid inputs
+        }
+    
+        // Calculate BMR using the Mifflin-St Jeor Equation
         const bmr = gender === 'male'
-            ? 9.563 * weightKg + 1.850 * heightCm - 4.676 * age + 655.1
-            : 13.75 * weightKg + 5.003 * heightCm - 6.755 * age + 66.47;
+            ? (10 * weightInKg) + (6.25 * heightInCm) - (5 * age) + 5 // Male formula
+            : (10 * weightInKg) + (6.25 * heightInCm) - (5 * age) - 161; // Female formula
+    
         return bmr;
-    }
-
+    };
+    
     const calculateCalories = (bmr) => {    //https://www.calories.info/calorie-intake-calculator
         const activityLevels = {
             sedentary : 1.2,
@@ -131,13 +165,8 @@ function DietForm() {
             active: 1.725,
             very_active: 1.9
         };
-        return bmr * activityLevels[formData.activity];
-    }
-    // Function to adjust calories based on weight plan
-    const calculateRecommendedCalories = () => {
-        const bmr = calculateBMR();
-        const maintenanceCalories = calculateCalories(bmr);
-
+        
+        const maintenanceCalories = bmr * activityLevels[formData.activity]
         switch (formData.weightPlan) {
             case 'lose':
                 return maintenanceCalories - 500; // Deficit for weight loss
@@ -146,21 +175,16 @@ function DietForm() {
             default:
                 return maintenanceCalories; // Maintain weight
         }
-    };
-
-    // Update recommended calories when relevant inputs change
-    useEffect(() => {
-        const calories = calculateRecommendedCalories();
-        setRecommendedCalories(Math.round(calories));
-    }, [formData]);
+    }
+    // Function to adjust calories based on weight plan
 
 
-    const handleSubmit = async (e) => {
+    const handleSubmit =  (e) => {
         e.preventDefault();
-
+        
         const { bmi, category, color } = calculateBMI();
         const bmr = calculateBMR();
-        const maintenanceCalories = calculateRecommendedCalories();
+        formData.maintenanceCalories = calculateCalories(bmr).toFixed(0);
 
         setFormData(prevState => ({
             ...prevState,
@@ -168,9 +192,7 @@ function DietForm() {
             category,
             color,
             bmr: bmr.toFixed(0),
-            maintenanceCalories: maintenanceCalories.toFixed(0)
         }));
-  
     };
     
     const handleGenerateClick = async () => {
@@ -196,7 +218,7 @@ function DietForm() {
                 return_distance: false,
             },
         };
-        console.log('payload', payload)
+        //console.log('payload', payload)
         try {
             const response = await fetch("http://127.0.0.1:5000/predict", {
                 method: "POST",
@@ -231,8 +253,18 @@ function DietForm() {
                 <div className="diet-form">
                     <h1>Welcome to your personalized Diet Recommendation System</h1>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <button type="button" id='unit' onClick={toggleUnit} className={`unit-button ${unit === 'metric' ? 'active' : ''}`} style={{ width: '100px', alignItems: 'center', marginRight: '10px'}}>Metric</button>
-                        <button type="button" onClick={toggleUnit} className={`unit-button ${unit === 'metric' ? 'active' : ''}`} style={{ width: '100px', alignItems: 'center', marginLeft: '10px'}}>English</button>
+                        <button type="button" 
+                                className={`unit-button ${unit === 'metric' ? 'active' : ''}`} 
+                                onClick={useMetric} 
+                                style={{ width: '100px', alignItems: 'center', marginRight: '10px'}}>
+                                Metric
+                        </button>
+                        <button type="button" 
+                                className={`unit-button ${unit === 'english' ? 'active' : ''}`} 
+                                onClick={useEnglish} 
+                                style={{ width: '100px', alignItems: 'center', marginLeft: '10px'}}>
+                                English
+                        </button>
                     </div>
                     <label>Age<input type="number" name="age" value={formData.age} onChange={handleChange} /></label>
                     {/* <label>Height(cm)<input type="number" name="height" value={formData.height} onChange={handleChange} /></label>
@@ -360,8 +392,6 @@ function DietForm() {
                     <div style={{ color: 'grey' }}>
                         """ Healthy BMI range: 18.5 kg/m² - 24.9 kg/m². """
                     </div>
-                    
-
                     <p>Calories: {formData.maintenanceCalories} calories/day</p>
                 </div>
                 
