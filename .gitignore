@@ -5,7 +5,7 @@
 /Backend/venv
 /Backend/.env
 /note.txt
-/node_modules
+node_modules/
 # /.pnp
 # .pnp.js
 
