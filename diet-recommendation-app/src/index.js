@@ -9,9 +9,4 @@ root.render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
-<<<<<<< HEAD
 );
-
-=======
-);
->>>>>>> 5650306 (Replace code with updated version)
