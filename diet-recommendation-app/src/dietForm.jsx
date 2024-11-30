@@ -11,8 +11,8 @@ function DietForm() {
         weightKg: 0,
         weightIb: 0,
         gender: 'male',
-        activity: 'little',
-        weightPlan: 'maintain',
+        activity: 'sedentary',
+        weightPlan: 'Maintain weight',
         hasRestrictions: false, 
         foodRestriction: '',
         specifiedIngredients: '',
@@ -30,7 +30,7 @@ function DietForm() {
         proteinContent: 10,
     });
     
-    const [recommendations, setRecommendations, setRecommendedCalories] = useState([]);
+    const [recommendations, setRecommendations] = useState([]);   //, setRecommendedCalories
     const [expandedIndex, setExpandedIndex] = useState(null);
     const [unit, setUnit] = useState('metric');
 
@@ -130,28 +130,46 @@ function DietForm() {
             active: 1.725,
             very_active: 1.9
         };
-        return bmr * activityLevels[formData.activity];
-    }
-    // Function to adjust calories based on weight plan
-    const calculateRecommendedCalories = () => {
-        const bmr = calculateBMR();
-        const maintenanceCalories = calculateCalories(bmr);
 
+        console.log("bmr: ", bmr)
+        console.log("formData.activity: ", formData.activity)
+        console.log("activityLevels[formData.activity]: ", activityLevels[formData.activity])
+        const maintenanceCalories = bmr * activityLevels[formData.activity]
+        console.log("maintenanceCalories: ", maintenanceCalories)
+        let calroiesNeed;
         switch (formData.weightPlan) {
-            case 'lose':
-                return maintenanceCalories - 500; // Deficit for weight loss
-            case 'gain':
-                return maintenanceCalories + 500; // Surplus for weight gain
+            case 'Lose weight':
+                calroiesNeed =  maintenanceCalories - 500; // Deficit for weight loss
+                break;
+            case 'Gain weight':
+                calroiesNeed =  maintenanceCalories + 500; // Surplus for weight gain
+                break;
             default:
-                return maintenanceCalories; // Maintain weight
+                calroiesNeed =  maintenanceCalories; // Maintain weight
         }
-    };
+        console.log("calroiesNeed: ", calroiesNeed)
+        return calroiesNeed
+    }
+    // // Function to adjust calories based on weight plan
+    // const calculateRecommendedCalories = () => {
+    //     const bmr = calculateBMR();
+    //     const maintenanceCalories = calculateCalories(bmr);
 
-    // Update recommended calories when relevant inputs change
-    useEffect(() => {
-        const calories = calculateRecommendedCalories();
-        setRecommendedCalories(Math.round(calories));
-    }, [formData]);
+    //     switch (formData.weightPlan) {
+    //         case 'lose':
+    //             return maintenanceCalories - 500; // Deficit for weight loss
+    //         case 'gain':
+    //             return maintenanceCalories + 500; // Surplus for weight gain
+    //         default:
+    //             return maintenanceCalories; // Maintain weight
+    //     }
+    // };
+
+    // // Update recommended calories when relevant inputs change
+    // useEffect(() => {
+    //     const calories = calculateRecommendedCalories();
+    //     setRecommendedCalories(Math.round(calories));
+    // }, [formData]);
 
 
     const handleSubmit = async (e) => {
@@ -159,7 +177,9 @@ function DietForm() {
 
         const { bmi, category, color } = calculateBMI();
         const bmr = calculateBMR();
-        const maintenanceCalories = calculateRecommendedCalories();
+        console.log("calculateCalories(bmr): ", calculateCalories(bmr))
+        const calroiesNeed = calculateCalories(bmr);
+        // const maintenanceCalories = calculateRecommendedCalories();
 
         setFormData(prevState => ({
             ...prevState,
@@ -167,7 +187,7 @@ function DietForm() {
             category,
             color,
             bmr: bmr.toFixed(0),
-            maintenanceCalories: maintenanceCalories.toFixed(0)
+            calroiesNeed: `${calroiesNeed.toFixed(0)} calories/day`
         }));
   
     };
@@ -295,9 +315,9 @@ function DietForm() {
                     </label>
                     <label>Choose your weight loss plan:
                         <select name="weightPlan" value={formData.weightPlan} onChange={handleChange}>
-                            <option value="maintain">Maintain weight</option>
-                            <option value="lose">Lose weight</option>
-                            <option value="gain">Gain weight</option>
+                            <option value="Maintain weight">Maintain weight</option>
+                            <option value="Lose weight">Lose weight</option>
+                            <option value="Gain weight">Gain weight</option>
                         </select>
                     </label>
                     <label>
@@ -358,18 +378,26 @@ function DietForm() {
             </form>
 
             <div className="right-container">
-                <div className="results">
-                    <h2>Body Mass Index (BMI):</h2>
-                    
-                    <div style={{ fontSize: '20px', color: formData.color}}>
-                        {formData.bmi} <span style={{ marginLeft: '20px', color: formData.color }}>{formData.category}</span>
+                <div className="results" style={{ display: 'flex'}}>
+                    <div>
+                        <h2>Body Mass Index (BMI):</h2>
+                        
+                        <div style={{ fontSize: '20px', color: formData.color}}>
+                            {formData.bmi} <span style={{ marginLeft: '20px', color: formData.color }}>{formData.category}</span>
+                        </div>
+                        <div style={{ color: 'grey' }}>
+                            """ Healthy BMI range: 18.5 kg/m² - 24.9 kg/m². """
+                        </div>
                     </div>
-                    <div style={{ color: 'grey' }}>
-                        """ Healthy BMI range: 18.5 kg/m² - 24.9 kg/m². """
-                    </div>
-                    
+                    <div style={{ height: 'auto', width: '1px', backgroundColor: '#000', margin: '0 20px'}}></div>
+                    <div>
+                        <h2>Suggested Calories:</h2>
 
-                    <p>Calories: {formData.maintenanceCalories} calories/day</p>
+                        <div style={{ color: '#ba5b07', fontSize: '25px' }}> 
+                            {formData.weightPlan}: <span style={{ textDecoration: 'underline', color: '#8a5322' }}>Around {formData.calroiesNeed}</span>
+                        </div>
+                    </div>
+                    
                 </div>
                 
                 <div className="nutrition-tracking">
