@@ -16,18 +16,18 @@
 # # Flask-WTF requires this line
 # csrf = CSRFProtect(app)
 
-import logging
-from flask import Flask, request, jsonify
+# import logging
+# from flask import Flask, request, jsonify
 
-app = Flask(__name__)
-logging.basicConfig(level=logging.DEBUG)
+# app = Flask(__name__)
+# logging.basicConfig(level=logging.DEBUG)
 
-@app.route('/submit', methods=['POST'])
-def submit_form():
-    data = request.get_json()
-    # Process the form data here (e.g., save to a database)
-    app.logger.debug(f"Received data: {data}")
-    return jsonify({'message': 'Form submitted successfully!'})
+# @app.route('/submit', methods=['POST'])
+# def submit_form():
+#     data = request.get_json()
+#     # Process the form data here (e.g., save to a database)
+#     app.logger.debug(f"Received data: {data}")
+#     return jsonify({'message': 'Form submitted successfully!'})
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# if __name__ == '__main__':
+#     app.run(debug=True)
