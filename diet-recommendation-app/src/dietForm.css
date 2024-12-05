@@ -18,21 +18,11 @@
   max-width: 450px; 
 }
 
-/* .results {
-  flex: 1 0 30%;
-  width: 200px; 
-  padding: 20px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background-color: #fff;
-} */
-
-
 .right-container {
   flex: 1 0 30%; 
   display: flex;
   flex-direction: column;
-  gap: 20px; 
+  gap: 25px; 
   /* width: 200px; */
 }
 
@@ -55,38 +45,15 @@
 
 .nutrition-tracking label {
   /* padding: 10px; */
-  margin-right: 10px; 
+  margin-right: 15px; 
 }
 
-
-/* .diet-form {
-  flex: 1 0 60%; 
-  padding: 20px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background-color: #fdf9f2;
-}
-
-.results {
-  flex: 1 0 30%; 
+.food-recommendations {
   padding: 20px;
   border: 1px solid #ccc;
   border-radius: 8px;
   background-color: #fff;
-} */
-
-
-
-
-
-/* .diet-form {
-  max-width: 600px;
-  margin: 20px auto;
-  padding: 20px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background-color: #fdf9f2;
-} */
+}
 
 .diet-form h1 {
   text-align: center;
@@ -133,15 +100,6 @@
 .diet-form button:hover {
   background-color: #D4BDAC;
 }
-
-/* input[type='number'] {
-  margin-right: 10px;
-  margin-left: 5px;
-}
-
-label {
-  margin-right: 20px;
-} */
 
 .diet-form .unit-button {
   background-color: #D4BDAC; 
