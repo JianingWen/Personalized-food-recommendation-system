@@ -1,5 +1,6 @@
 import React, { useState, useEffect, Component } from 'react';
 import './dietForm.css';
+// import recipeImageIcon from './image_sources/image_icon.png';
 
 function DietForm() {
     const [formData, setFormData] = useState({
@@ -33,10 +34,17 @@ function DietForm() {
     const [expandedIndex, setExpandedIndex] = useState(null);
     const [unit, setUnit] = useState('metric');
     const [showNutrition, setShowNutrition] = useState(false);
+    const [imageUrl, setImageUrl] = useState('');
+    const [error, setError] = useState('');
 
-    const toggleUnit = () => {
-        setUnit(prevUnit => (prevUnit === 'metric' ? 'english' : 'metric'));
-    };  
+    // const toggleUnit = () => {
+    //     setUnit(prevUnit => (prevUnit === 'metric' ? 'english' : 'metric'));
+    // };  
+
+    const toggleUnit = (newUnit) => {
+        setUnit(newUnit);
+    };
+    
 
     const handleChange = (e) => {
         const { name, type, value, checked } = e.target;
@@ -105,7 +113,7 @@ function DietForm() {
             color = 'green';
         } else if (bmi >= 25 && bmi < 30) {
             category = 'Overweight';
-            color = 'yellow';
+            color = '#f2c41d';
         } else {
             category = 'Obesity';
             color = 'red';
@@ -228,39 +236,67 @@ function DietForm() {
         }
     };
 
-    const toggleExpand = (index) => {
-        setExpandedIndex((prevIndex) => (prevIndex === index ? null : index));
+    // const toggleExpand = (index) => {
+    //     setExpandedIndex((prevIndex) => (prevIndex === index ? null : index));
+    //     setExpandedImageIndex((prevIndex) => (prevIndex === index ? null : index));
+    // };
+
+    const toggleExpand = (recipeName, index) => {
+        setSearchTerm(recipeName)
+        if (expandedIndex === index) {
+            setExpandedIndex(null);
+            setImageIndex(null);
+            // setExpandedImageIndex(null);  
+        } else {
+            setExpandedIndex(index);
+            setImageIndex(index);
+            fetchImage();
+        }
     };
 
-    // const [showImageModal, setShowImageModal] = useState(false);
-    // const [currentImageUrl, setCurrentImageUrl] = useState('');
 
-    // const viewImage = (imageUrl) => {
-    //     setCurrentImageUrl(imageUrl);
-    //     setShowImageModal(true);
+
+
+    const [isPressed, setIsPressed] = useState(false);
+    const handleMouseDown = () => {
+        setIsPressed(true);
+    };
+
+    const handleMouseUp = () => {
+        setIsPressed(false);
+    };
+
+    
+    const [searchTerm, setSearchTerm] = useState('');
+    const [imageIndex, setImageIndex] = useState(null);
+
+    const fetchImage = async () => {
+        try {
+            console.log("searchTerm: ", encodeURIComponent(searchTerm))
+            const response = await fetch(`http://localhost:5000/api/images?recipe_name=${encodeURIComponent(searchTerm)}`);
+            console.log("response: ", response)
+            if (response.ok) {
+                const data = await response.json();  
+                console.log("Image URL here: ", data);
+                setImageUrl(data.imageUrl);  
+                setError('');  
+            } else {
+                throw new Error('Failed to fetch image: ' + response.statusText);
+            }
+        } catch (err) {
+            console.error('Fetch error:', err);
+            setError(err.message);  // Set error message
+            setImageUrl('');  // Reset image URL on error
+        }
+    };
+
+    // const viewImage = (recipeName, index) => {
+    //     // setSearchTerm(recipeName);  
+    //     // fetchImage();  
     // };
-    // // const viewImage = (imageUrl) => {
-    // //     const imageWindow = window.open('', 'Image', 'width=600,height=400');
-    // //     imageWindow.document.write(`<title>Recipe Image</title>`);
-    // //     imageWindow.document.write(`<img src="${imageUrl}" alt="Recipe Image" style="width:100%; height:auto;"/>`);
-    // //     imageWindow.document.close();
-    // // };
 
-    // const closeImageModal = () => {
-    //     setShowImageModal(false);
-    // };
+    const viewNutritions = (recipe) => {
 
-    // const ImageModal = () => (
-    //     showImageModal && (
-    //         <div style={{ position: 'fixed', top: '20%', left: '20%', zIndex: 1050, backgroundColor: 'white', padding: '20px', borderRadius: '8px' }}>
-    //             <h3>Recipe Image</h3>
-    //             <img src={currentImageUrl} alt="Recipe" style={{ width: '100%' }} />
-    //             <button onClick={closeImageModal} style={{ marginTop: '10px' }}>Close</button>
-    //         </div>
-    //     )
-    // );
-
-    const viewNutritions = (recipe, index) => {
         const recipeNutrions = [
             recipe.Calories, recipe.FatContent, recipe.SaturatedFatContent, recipe.CholesterolContent, 
             recipe.SodiumContent, recipe.CarbohydrateContent, recipe.FiberContent, recipe.SugarContent,
@@ -315,16 +351,28 @@ function DietForm() {
     };
 
     
-    
+    // useEffect(() => {
+    //     if (expandedIndex === index) {
+    //         fetchImage(recipe.name);
+    //     }
+    // }, [expandedIndex, index, recipe.name]);
 
     return (
         <div className="diet-info-container">
             <form onSubmit={handleSubmit}>
                 <div className="diet-form">
                     <h1>Welcome to your personalized Diet Recommendation System</h1>
-                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    {/* <div style={{ display: 'flex', justifyContent: 'center' }}>
                         <button type="button" id='unit' onClick={toggleUnit} className={`unit-button ${unit === 'metric' ? 'active' : ''}`} style={{ width: '100px', alignItems: 'center', marginRight: '10px'}}>Metric</button>
                         <button type="button" onClick={toggleUnit} className={`unit-button ${unit === 'metric' ? 'active' : ''}`} style={{ width: '100px', alignItems: 'center', marginLeft: '10px'}}>English</button>
+                    </div> */}
+                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <button type="button" onClick={() => toggleUnit('metric')} className={`unit-button ${unit === 'metric' ? 'active' : ''}`} style={{ width: '100px', alignItems: 'center', marginRight: '10px'}}>
+                            Metric
+                        </button>
+                        <button type="button" onClick={() => toggleUnit('english')} className={`unit-button ${unit === 'english' ? 'active' : ''}`} style={{ width: '100px', alignItems: 'center', marginLeft: '10px'}}>
+                            English
+                        </button>
                     </div>
                     <label>Age<input type="number" name="age" value={formData.age} onChange={handleChange} /></label>
                     {/* <label>Height(cm)<input type="number" name="height" value={formData.height} onChange={handleChange} /></label>
@@ -440,7 +488,7 @@ function DietForm() {
                             onChange={handleChange}
                         />
                     </label> */}
-                    <label>Meals per day<input type="number" name="mealsPerDay" value={formData.mealsPerDay} onChange={handleChange} /></label>
+                    {/* <label>Meals per day<input type="number" name="mealsPerDay" value={formData.mealsPerDay} onChange={handleChange} /></label> */}
                     {/* <button onClick={() => console.log(formData)}>Generate</button> */}
 
                     {/* <label>Results:</label>
@@ -471,6 +519,9 @@ function DietForm() {
                         <div style={{ color: '#ba5b07', fontSize: '25px' }}> 
                             {formData.weightPlan}: <span style={{ textDecoration: 'underline', color: '#8a5322' }}>Around {formData.calroiesNeed}</span>
                         </div>
+                        <p style={{ color: '#7b93ba', fontSize: '18px', marginTop: '10px' }}>
+                            This is a personalized daily calorie intake suggestion based on your individual profile. Feel free to mix and match recipes based on their calorie content and nutritional values to meet your goals.
+                        </p>
                     </div>
                     
                 </div>
@@ -536,7 +587,7 @@ function DietForm() {
                                 {recommendations.map((recipe, index) => (
                                     <li key={index}>
                                         <div
-                                            onClick={() => toggleExpand(index)}
+                                            onClick={() => toggleExpand(recipe.Name, index)}
                                             style={{
                                                 cursor: "pointer",
                                                 fontWeight: "bold",
@@ -544,11 +595,30 @@ function DietForm() {
                                             }}
                                         >
                                             {recipe.Name} ({recipe.Calories} Calories)
-                                            <button onClick={() => viewNutritions(recipe, index)} style={{ marginLeft: '10px' }}>View Nutritions</button>
+                                            {/* <button onClick={() => viewImage(recipe)} style={{ marginLeft: '10px' }}>View Nutritions</button> */}
+                                            {/* <button onClick={() => viewImage(recipe)} style={{  border: 'none', background: 'none'  }}> */}
 
+                                            {/* <img src={recipeImageIcon} alt="View Images" onMouseDown={handleMouseDown}
+                                                onMouseUp={handleMouseUp}
+                                                onMouseLeave={handleMouseUp} onClick={() => viewImage(recipe.Name)} style={{ cursor: 'pointer', width: '25px', height: '25px', opacity: isPressed ? 0.7 : 1, transition: 'opacity 0.2s ease'}} />
+
+                                            {imageUrl && <img src={imageUrl} alt="Search Result" />}
+                                                {error && <p>Error: {error}</p>} */}
+
+                                                {/* <img src={recipeImageIcon} alt="View Images" onMouseDown={handleMouseDown}
+                            onMouseUp={handleMouseUp}
+                            onMouseLeave={handleMouseUp} onClick={() => viewImage(recipe.Name, index)} style={{ cursor: 'pointer', width: '25px', height: '25px', opacity: isPressed ? 0.7 : 1, transition: 'opacity 0.2s ease'}} /> */}
+
+                        {/* {imageIndex === index && imageUrl && <img src={imageUrl} alt="Search Result" />}
+                        {imageIndex === index && error && <p>Error: {error}</p>} */}
+
+                                            <button onClick={() => viewNutritions(recipe)} style={{ marginLeft: '10px' }}>View Nutritions</button>
                                         </div>
-                                        {expandedIndex === index && (
+                                        {expandedIndex === index && imageIndex === index &&(
                                             <div className="recipe-details">
+                                                {/* {imageUrl && <img src={imageUrl} alt="Recipe Visual" style={{ width: '100%', maxHeight: '300px' }} />} */}
+                                                {imageUrl && <img src={imageUrl} alt="Recipe Image" style={{ width: '200px', height: '200px' }}/>}
+                                                {/* {error && <p>Error: {error}</p>} */}
                                                 <p>
                                                     <b>Ingredients:</b>{" "}
                                                     {recipe.RecipeIngredientParts.join(", ")}
