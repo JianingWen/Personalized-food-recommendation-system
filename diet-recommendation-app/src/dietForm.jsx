@@ -1,5 +1,7 @@
 import React, { useState, useEffect, Component } from 'react';
+import { Bar } from 'react-chartjs-2';
 import './dietForm.css';
+import 'chart.js/auto';
 // import recipeImageIcon from './image_sources/image_icon.png';
 
 function DietForm() {
@@ -36,11 +38,12 @@ function DietForm() {
     const [showNutrition, setShowNutrition] = useState(false);
     const [imageUrl, setImageUrl] = useState('');
     const [error, setError] = useState('');
-
+    const [showChart, setShowChart] = useState(false);
+    const [chartData, setChartData] = useState(null);
     // const toggleUnit = () => {
     //     setUnit(prevUnit => (prevUnit === 'metric' ? 'english' : 'metric'));
     // };  
-
+    
     const toggleUnit = (newUnit) => {
         setUnit(newUnit);
     };
@@ -178,8 +181,10 @@ function DietForm() {
 
         setShowNutrition(true);  
     };
-    
+    const [nutritionRecommendations, setNutritionRecommendations] = useState([]);
+
     const handleGenerateClick = async () => {
+        setNutritionRecommendations(generateRecommendations()); 
         setRecommendations([]);
         const payload = {
             nutrition_input: [
@@ -203,6 +208,7 @@ function DietForm() {
                 return_distance: false,
             },
         };
+
         console.log('payload', payload)
         try {
             const response = await fetch("http://127.0.0.1:5000/predict", {
@@ -212,14 +218,6 @@ function DietForm() {
                 },
                 body: JSON.stringify(payload),
             });
-
-            // const response = await fetch('/submit', {
-            //     method: 'POST',
-            //     headers: {
-            //         'Content-Type': 'application/json'
-            //     },
-            //     body: JSON.stringify(formData)
-            // });
     
             const data = await response.json();
             console.log('Response:', data);
@@ -236,11 +234,6 @@ function DietForm() {
         }
     };
 
-    // const toggleExpand = (index) => {
-    //     setExpandedIndex((prevIndex) => (prevIndex === index ? null : index));
-    //     setExpandedImageIndex((prevIndex) => (prevIndex === index ? null : index));
-    // };
-
     const toggleExpand = (recipeName, index) => {
         setSearchTerm(recipeName)
         if (expandedIndex === index) {
@@ -253,9 +246,6 @@ function DietForm() {
             fetchImage();
         }
     };
-
-
-
 
     const [isPressed, setIsPressed] = useState(false);
     const handleMouseDown = () => {
@@ -290,82 +280,110 @@ function DietForm() {
         }
     };
 
-    // const viewImage = (recipeName, index) => {
-    //     // setSearchTerm(recipeName);  
-    //     // fetchImage();  
-    // };
+    const viewNutritions = (recipe, index) => {
+        setShowChart(true);
+        setExpandedIndex(index);
 
-    const viewNutritions = (recipe) => {
-
-        const recipeNutrions = [
-            recipe.Calories, recipe.FatContent, recipe.SaturatedFatContent, recipe.CholesterolContent, 
-            recipe.SodiumContent, recipe.CarbohydrateContent, recipe.FiberContent, recipe.SugarContent,
-            recipe.ProteinContent
+        const recipeNutrition = [
+            recipe.Calories,
+            recipe.FatContent,
+            recipe.SaturatedFatContent,
+            recipe.CholesterolContent,
+            recipe.SodiumContent,
+            recipe.CarbohydrateContent,
+            recipe.FiberContent,
+            recipe.SugarContent,
+            recipe.ProteinContent,
         ];
-    
-        const nutritionInput = [
-            formData.calories, formData.fatContent, formData.saturatedFatContent, formData.cholesterolContent,
-            formData.sodiumContent, formData.carbohydrateContent, formData.fiberContent, formData.sugarContent,
+        const userInputNutrition = [
+            formData.calories,
+            formData.fatContent,
+            formData.saturatedFatContent,
+            formData.cholesterolContent,
+            formData.sodiumContent,
+            formData.carbohydrateContent,
+            formData.fiberContent,
+            formData.sugarContent,
             formData.proteinContent,
         ];
-    
-        const nutritionData = {
-            labels: ['Calories', 'Fat Content', 'Saturated Fat Content', 'Cholesterol Content', 'Sodium Content', 'Carbohydrate Content', 'Fiber Content', 'Sugar Content', 'Protein Content'],
+        setChartData({
+            labels: [
+                'Calories', 'Fat (g)', 'Saturated Fat (g)', 'Cholesterol (mg)',
+                'Sodium (mg)', 'Carbohydrates (g)', 'Fiber (g)', 'Sugars (g)', 'Proteins (g)'
+            ],
             datasets: [
                 {
                     label: 'User Input Nutritional Values',
-                    data: nutritionInput,
-                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    data: userInputNutrition,
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
                     borderColor: 'rgba(54, 162, 235, 1)',
                     borderWidth: 1,
                 },
                 {
                     label: 'Recipe Nutritional Values',
-                    data: recipeNutrions,
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    data: recipeNutrition,
+                    backgroundColor: 'rgba(255, 99, 132, 0.5)',  // Red
                     borderColor: 'rgba(255, 99, 132, 1)',
                     borderWidth: 1,
-                }
-            ]
-        };
-
-        const width = 1000; 
-        const height = 500; 
-        const left = window.screenX + (window.outerWidth - width) / 2; 
-        const top = window.screenY + (window.outerHeight - height) / 2; 
-
-    
-        // const chartWindow = window.open("", "_blank");
-        const chartWindow = window.open("", "_blank", `width=${width},height=${height},left=${left},top=${top}`);
-
-        chartWindow.document.write(`<html><head><title>Nutritional Comparison</title></head><body><div id='root'></div><script src="https://cdn.jsdelivr.net/npm/chart.js"></script><script>
-            const ctx = document.createElement('canvas');
-            document.getElementById('root').appendChild(ctx);
-            const chart = new Chart(ctx, {
-                type: 'bar',
-                data: ${JSON.stringify(nutritionData)},
-                options: { scales: { y: { beginAtZero: true } } }
-            });
-        </script></body></html>`);
-        chartWindow.document.close();
+                },
+            ],
+        });
     };
+    const generateRecommendations = () => {
+        const { age, gender, weightPlan} = formData;
+        const nutrientLimits = {
+            calories: gender === 'male' ? 2500 : 2000,
+            fatContent: 70,
+            saturatedFatContent: 20,
+            cholesterolContent: 300,
+            sodiumContent: 2300,
+            carbohydrateContent: 275,
+            fiberContent: 28,
+            sugarContent: 50,
+            proteinContent: 50,
+        };
+        if (age > 50) {
+            nutrientLimits.sodiumContent = 1500; // Lower sodium limit for older adults
+        }
+        if (weightPlan === 'Lose weight') {
+            nutrientLimits.calories -= 500; // Reduce calories for weight loss
+        } else if (weightPlan === 'Gain weight') {
+            nutrientLimits.calories += 500; // Increase calories for weight gain
+        }
+        const recommendations = [];
+        const nutrients = [
+            { name: 'Calories', value: formData.calories, limit: nutrientLimits.calories },
+            { name: 'Fat', value: formData.fatContent, limit: nutrientLimits.fatContent },
+            { name: 'Saturated Fat', value: formData.saturatedFatContent, limit: nutrientLimits.saturatedFatContent },
+            { name: 'Cholesterol', value: formData.cholesterolContent, limit: nutrientLimits.cholesterolContent },
+            { name: 'Sodium', value: formData.sodiumContent, limit: nutrientLimits.sodiumContent },
+            { name: 'Carbohydrates', value: formData.carbohydrateContent, limit: nutrientLimits.carbohydrateContent },
+            { name: 'Fiber', value: formData.fiberContent, limit: nutrientLimits.fiberContent },
+            { name: 'Sugar', value: formData.sugarContent, limit: nutrientLimits.sugarContent },
+            { name: 'Protein', value: formData.proteinContent, limit: nutrientLimits.proteinContent },
+        ];
 
-    
-    // useEffect(() => {
-    //     if (expandedIndex === index) {
-    //         fetchImage(recipe.name);
-    //     }
-    // }, [expandedIndex, index, recipe.name]);
+        nutrients.forEach((nutrient) => {
+            if (nutrient.value > nutrient.limit) {
+                recommendations.push(`⚠️ ${nutrient.name} exceeds the recommended limit (${nutrient.limit}). Consider reducing it.`);
+            } else if (nutrient.value < nutrient.limit * 0.7) {
+                recommendations.push(`🔹 ${nutrient.name} is quite low. Aim to increase it.`);
+            } else {
+                recommendations.push(`✅ ${nutrient.name} is within a healthy range.`);
+            }
+        });
 
+        return recommendations;
+    };
+    useEffect(() => {
+        setNutritionRecommendations(generateRecommendations(formData));
+    }, []);
     return (
         <div className="diet-info-container">
             <form onSubmit={handleSubmit}>
                 <div className="diet-form">
                     <h1>Welcome to your personalized Diet Recommendation System</h1>
-                    {/* <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <button type="button" id='unit' onClick={toggleUnit} className={`unit-button ${unit === 'metric' ? 'active' : ''}`} style={{ width: '100px', alignItems: 'center', marginRight: '10px'}}>Metric</button>
-                        <button type="button" onClick={toggleUnit} className={`unit-button ${unit === 'metric' ? 'active' : ''}`} style={{ width: '100px', alignItems: 'center', marginLeft: '10px'}}>English</button>
-                    </div> */}
+                    
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                         <button type="button" onClick={() => toggleUnit('metric')} className={`unit-button ${unit === 'metric' ? 'active' : ''}`} style={{ width: '100px', alignItems: 'center', marginRight: '10px'}}>
                             Metric
@@ -443,20 +461,7 @@ function DietForm() {
                         Click the checkbox if you have any Food Restrictions.
                     </label>
                     {formData.hasRestrictions && (
-                        // <label>
-                        //     Select your food restriction:
-                        //     <select
-                        //         name="foodRestriction"
-                        //         value={formData.foodRestriction}
-                        //         onChange={handleChange}
-                        //     >
-                        //         <option value="">Please select</option>
-                        //         <option value="glutenFree">Gluten-Free</option>
-                        //         <option value="nutFree">Nut-Free</option>
-                        //         <option value="dairyFree">Dairy-Free</option>
-                        //         <option value="vegan">Vegan</option>
-                        //     </select>
-                        // </label>
+                        
                         <label>
                             Specify ingredients to not include, separated by ";" :
                             <input
@@ -478,23 +483,6 @@ function DietForm() {
                             onChange={handleChange}
                         />
                     </label>
-                    {/* <label>
-                        Specify ingredients to not include, separated by ";" :
-                        <input
-                            type="text"
-                            name="noIngredients"
-                            placeholder="Ingredient1;Ingredient2;..."
-                            value={formData.noIngredients}
-                            onChange={handleChange}
-                        />
-                    </label> */}
-                    {/* <label>Meals per day<input type="number" name="mealsPerDay" value={formData.mealsPerDay} onChange={handleChange} /></label> */}
-                    {/* <button onClick={() => console.log(formData)}>Generate</button> */}
-
-                    {/* <label>Results:</label>
-                    <div>BMI: {formData.bmi} (Category: <span style={{ color: formData.color }}>{formData.category}</span>)</div>
-                    <div>BMR: {formData.bmr} calories/day</div>
-                    <div>Maintenance Calories: {formData.maintenanceCalories} calories/day</div> */}
                     
                     <button type="submit">Submit</button>
                 </div>
@@ -527,58 +515,61 @@ function DietForm() {
                 </div>
                 
                 {showNutrition && (
-                    <div className="nutrition-tracking">
-                        <h2>Nutrition Tracking</h2>
-                        <label><b>Calories:</b>
-                            <input type="range" name="calories" min="0" max="2000" value={formData.calories} onChange={handleNutritionChange} />
-                            {formData.calories} kcal | 
-                        </label>
-                        <label><b>Fat Content:</b>
-                            <input type="range" name="fatContent" min="0" max="100" value={formData.fatContent} onChange={handleNutritionChange} />
-                            {formData.fatContent} g | 
-                        </label>
-                        <label><b>Saturated Fat Content:</b>
-                            <input type="range" name="saturatedFatContent" min="0" max="13" value={formData.saturatedFatContent} onChange={handleNutritionChange} />
-                            {formData.saturatedFatContent} g | 
-                        </label>
-                        <label><b>Cholesterol Content:</b>
-                            <input type="range" name="cholesterolContent" min="0" max="300" value={formData.cholesterolContent} onChange={handleNutritionChange} />
-                            {formData.cholesterolContent} mg | 
-                        </label>
-                        <label><b>Sodium Content:</b>
-                            <input type="range" name="sodiumContent" min="0" max="2300" value={formData.sodiumContent} onChange={handleNutritionChange} />
-                            {formData.sodiumContent} mg | 
-                        </label>
-                        <label><b>Carbohydrate Content:</b>
-                            <input type="range" name="carbohydrateContent" min="0" max="325" value={formData.carbohydrateContent} onChange={handleNutritionChange} />
-                            {formData.carbohydrateContent} g | 
-                        </label>
-                        <label><b>Fiber Content:</b>
-                            <input type="range" name="fiberContent" min="0" max="50" value={formData.fiberContent} onChange={handleNutritionChange} />
-                            {formData.fiberContent} g | 
-                        </label>
-                        <label><b>Sugar Content:</b>
-                            <input type="range" name="sugarContent" min="0" max="40" value={formData.sugarContent} onChange={handleNutritionChange} />
-                            {formData.sugarContent} g | 
-                        </label>
-                        <label><b>Protein Content:</b>
-                            <input type="range" name="proteinContent" min="0" max="40" value={formData.proteinContent} onChange={handleNutritionChange} />
-                            {formData.proteinContent} g | 
-                        </label>
-                        {/* <label>Calories:
-                            <div className="slider-value">{formData.calories} kcal</div>
-                            <input type="range" name="calories" min="0" max="2000" value={formData.calories} onChange={handleNutritionChange} />
-                        </label>
-                        <label>Fat Content:
-                            <div className="slider-value">{formData.fatContent} g</div>
-                            <input type="range" name="fatContent" min="0" max="100" value={formData.fatContent} onChange={handleNutritionChange} />
-                        </label> */}
-                        
-                        <div>
-                            <button type="button" onClick={handleGenerateClick}>Generate</button>
+                    <div className="nutrition-container">
+                        <div className="nutrition-tracking">
+                            <h2>Nutrition Tracking</h2>
+                            <label><b>Calories:</b>
+                                <input type="range" name="calories" min="0" max="2000" value={formData.calories} onChange={handleNutritionChange} />
+                                {formData.calories} kcal
+                            </label>
+                            <label><b>Fat Content:</b>
+                                <input type="range" name="fatContent" min="0" max="100" value={formData.fatContent} onChange={handleNutritionChange} />
+                                {formData.fatContent} g
+                            </label>
+                            <label><b>Saturated Fat Content:</b>
+                                <input type="range" name="saturatedFatContent" min="0" max="13" value={formData.saturatedFatContent} onChange={handleNutritionChange} />
+                                {formData.saturatedFatContent} g
+                            </label>
+                            <label><b>Cholesterol Content:</b>
+                                <input type="range" name="cholesterolContent" min="0" max="300" value={formData.cholesterolContent} onChange={handleNutritionChange} />
+                                {formData.cholesterolContent} mg
+                            </label>
+                            <label><b>Sodium Content:</b>
+                                <input type="range" name="sodiumContent" min="0" max="2300" value={formData.sodiumContent} onChange={handleNutritionChange} />
+                                {formData.sodiumContent} mg
+                            </label>
+                            <label><b>Carbohydrate Content:</b>
+                                <input type="range" name="carbohydrateContent" min="0" max="325" value={formData.carbohydrateContent} onChange={handleNutritionChange} />
+                                {formData.carbohydrateContent} g
+                            </label>
+                            <label><b>Fiber Content:</b>
+                                <input type="range" name="fiberContent" min="0" max="50" value={formData.fiberContent} onChange={handleNutritionChange} />
+                                {formData.fiberContent} g
+                            </label>
+                            <label><b>Sugar Content:</b>
+                                <input type="range" name="sugarContent" min="0" max="40" value={formData.sugarContent} onChange={handleNutritionChange} />
+                                {formData.sugarContent} g
+                            </label>
+                            <label><b>Protein Content:</b>
+                                <input type="range" name="proteinContent" min="0" max="40" value={formData.proteinContent} onChange={handleNutritionChange} />
+                                {formData.proteinContent} g
+                            </label>
+                            <button type="button" onClick={handleGenerateClick} style={{ marginTop: '10px' }}>Generate</button>
                         </div>
+
+                        {nutritionRecommendations.length > 0 && (
+                            <div className="nutrition-recommendations">
+                                <h3>Nutrition Recommendations</h3>
+                                <ul>
+                                    {nutritionRecommendations.map((rec, idx) => (
+                                        <li key={idx}>{rec}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
                     </div>
-                )}    
+)}
+ 
                 {showNutrition && (    
                     <div className="food-recommendations">
                         <h2>Food Recommendations</h2>
@@ -592,33 +583,24 @@ function DietForm() {
                                                 cursor: "pointer",
                                                 fontWeight: "bold",
                                                 color: expandedIndex === index ? "#007BFF" : "#000",
-                                            }}
-                                        >
+                                            }}>
                                             {recipe.Name} ({recipe.Calories} Calories)
-                                            {/* <button onClick={() => viewImage(recipe)} style={{ marginLeft: '10px' }}>View Nutritions</button> */}
-                                            {/* <button onClick={() => viewImage(recipe)} style={{  border: 'none', background: 'none'  }}> */}
-
-                                            {/* <img src={recipeImageIcon} alt="View Images" onMouseDown={handleMouseDown}
-                                                onMouseUp={handleMouseUp}
-                                                onMouseLeave={handleMouseUp} onClick={() => viewImage(recipe.Name)} style={{ cursor: 'pointer', width: '25px', height: '25px', opacity: isPressed ? 0.7 : 1, transition: 'opacity 0.2s ease'}} />
-
-                                            {imageUrl && <img src={imageUrl} alt="Search Result" />}
-                                                {error && <p>Error: {error}</p>} */}
-
-                                                {/* <img src={recipeImageIcon} alt="View Images" onMouseDown={handleMouseDown}
-                            onMouseUp={handleMouseUp}
-                            onMouseLeave={handleMouseUp} onClick={() => viewImage(recipe.Name, index)} style={{ cursor: 'pointer', width: '25px', height: '25px', opacity: isPressed ? 0.7 : 1, transition: 'opacity 0.2s ease'}} /> */}
-
-                        {/* {imageIndex === index && imageUrl && <img src={imageUrl} alt="Search Result" />}
-                        {imageIndex === index && error && <p>Error: {error}</p>} */}
-
-                                            <button onClick={() => viewNutritions(recipe)} style={{ marginLeft: '10px' }}>View Nutritions</button>
+                                            <button onClick={() => viewNutritions(recipe)} style={{ marginLeft: '10px' }}>See Details</button>
                                         </div>
                                         {expandedIndex === index && imageIndex === index &&(
-                                            <div className="recipe-details">
-                                                {/* {imageUrl && <img src={imageUrl} alt="Recipe Visual" style={{ width: '100%', maxHeight: '300px' }} />} */}
-                                                {imageUrl && <img src={imageUrl} alt="Recipe Image" style={{ width: '200px', height: '200px' }}/>}
-                                                {/* {error && <p>Error: {error}</p>} */}
+                                            <div className="recipe-details" style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+                                                {showChart && chartData && (
+                                                    <div style={{ width: '100%', maxWidth: '500px', height: '300px' }}>
+                                                    <Bar data={chartData} options={{ responsive: true, maintainAspectRatio: false }} />
+                                                    </div>
+                                                )}
+                                                {imageUrl && (
+                                                    <div style={{ flex: '0 0 200px', height: '200px', marginTop: '20px'}}>
+                                                        <img src={imageUrl} alt="Recipe Image" style={{ width: '100%', height:'100%', maxHeight: '200px', objectFit: 'cover', borderRadius: '8px' }}/>
+                                                    </div>
+                                                )}
+                                                    {/* {error && <p>Error: {error}</p>} */}
+                                                <div style={{ flex: '1 1 300px' }}>
                                                 <p>
                                                     <b>Ingredients:</b>{" "}
                                                     {recipe.RecipeIngredientParts.join(", ")}
@@ -627,6 +609,7 @@ function DietForm() {
                                                     <b>Instructions:</b>{" "}
                                                     {recipe.RecipeInstructions.join("\n")}
                                                 </p>
+                                                </div>
                                             </div>
                                         )}
                                     </li>
